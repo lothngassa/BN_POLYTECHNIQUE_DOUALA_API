@@ -1,8 +1,8 @@
+# memoires/urls.py
+
 from django.urls import path
-from .views import MemoireListCreate
+from . import views
 
 urlpatterns = [
-    # Route pour lister et créer un mémoire
-    # L'URL complète sera : /api/memoires/
-    path('memoires/', MemoireListCreate.as_view(), name='memoire-list-create'),
+    path('memoires/', views.memoire_list, name='memoire-list-submit'),
 ]
