@@ -1,24 +1,15 @@
 import os
-import dj_database_url # <--- AJOUT OBLIGATOIRE POUR RAILWAY
+import dj_database_url
 from pathlib import Path
 
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-l2!am&7ke4b4sv@0@y4k0!*bdic8$l5#s)i!#u+foyqzeqh%nm')
 
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
+DEBUG = 'RENDER' not in os.environ
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-l2!am&7ke4b4sv@0@y4k0!*bdic8$l5#s)i!#u+foyqzeqh%nm'
+ALLOWED_HOSTS = ['*']
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-
-ALLOWED_HOSTS = ['*'] # <--- CORRECTION : Autorise toutes les connexions pour le déploiement
-
-
-# Application definition
 
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -28,7 +19,6 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
 
-    # --- VOS APPLICATIONS TIERCES ET LOCALES ---
     'rest_framework',
     'memoires.apps.MemoiresConfig',
     'corsheaders',
@@ -37,8 +27,8 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    "whitenoise.middleware.WhiteNoiseMiddleware", # <--- AJOUT OBLIGATOIRE POUR LA GESTION DES STATICS
-    'corsheaders.middleware.CorsMiddleware', # DOIT être avant CommonMiddleware
+    "whitenoise.middleware.WhiteNoiseMiddleware",
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -67,46 +57,45 @@ TEMPLATES = [
 WSGI_APPLICATION = 'bn_polytechnique.wsgi.application'
 
 
-# Database
-# Remplacement de l'ancienne section DATABASES par la configuration dynamique
+# SECTION CLÉ : CONFIGURATION DE LA BASE DE DONNÉES PERSISTANTE
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.config(
+        default='sqlite:///db.sqlite3',
+        conn_max_age=600
+    )
 }
 
-# Ceci configure la connexion à la base de données PostgreSQL de Railway
-db_from_env = dj_database_url.config(conn_max_age=500)
-DATABASES['default'].update(db_from_env) # <--- REMPLACEMENT OBLIGATOIRE
+
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
 
 
-# Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-# ... (votre validation de mot de passe) ...
+LANGUAGE_CODE = 'en-us'
+TIME_ZONE = 'UTC'
+USE_I18N = True
+USE_TZ = True
 
 
-# Internationalization
-# ... (votre configuration I18N) ...
-
-
-# Static files (CSS, JavaScript, Images)
-# Configuration de base existante
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# --- CONFIGURATION DE PRODUCTION POUR WHITENOISE ---
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') # <--- NOUVELLE LIGNE
-STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage' # <--- NOUVELLE LIGNE
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Default primary key field type
-# ...
-
-# -----------------------------------------------------------------
-# CONFIGURATION DES FICHIERS TÉLÉVERSÉS (PDFs)
-# -----------------------------------------------------------------
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-# --- Configuration CORS ---
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
