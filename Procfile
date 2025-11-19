@@ -1,0 +1,1 @@
+web: gunicorn bn_polytechnique.wsgi --log-file -
