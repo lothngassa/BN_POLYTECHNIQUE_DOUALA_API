@@ -3,6 +3,7 @@ URL configuration pour le projet bn_polytechnique.
 """
 from django.contrib import admin
 from django.urls import path, include
+# Importations nécessaires pour servir les fichiers médias
 from django.conf import settings
 from django.conf.urls.static import static
 
@@ -15,10 +16,10 @@ urlpatterns = [
     path('api/', include('memoires.urls')),
 ]
 
-# Ajout des URLs pour servir les fichiers médias (PDFs) en mode DEV/Production
-# Ceci est essentiel pour que les URLs de fichiers PDF (MEDIA_URL) soient accessibles
+# =========================================================
+# Configuration pour servir les fichiers MÉDIAS (PDFs)
+# =========================================================
+# Cette ligne est essentielle pour que les URLs de fichiers PDF (MEDIA_URL) soient accessibles.
+# Elle ne fonctionne correctement que lorsque DEBUG=True.
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-# NOTE: Render (en mode production) n'utilise pas cette configuration pour les statics,
-# mais elle est utile pour les fichiers MEDIA (PDFs) et la compatibilité.
