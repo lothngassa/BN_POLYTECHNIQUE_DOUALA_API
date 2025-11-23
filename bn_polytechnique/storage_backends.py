@@ -2,7 +2,8 @@ from django.core.files.storage import Storage
 from django.conf import settings
 from supabase import create_client, Client
 import logging
-import os 
+import os
+import io 
 
 logger = logging.getLogger(__name__)
 
@@ -33,13 +34,20 @@ class SupabaseStorage(Storage):
         if not self.client:
             raise Exception("Client Supabase non initialisé.")
         
-        file_content_type = getattr(content.file, 'content_type', 'application/octet-stream')
-
+        # CORRECTIF DÉFINITIF (tentative 3) : Utilisation de l'argument positionnel pour le contenu.
+        
+        # S'assurer que le pointeur de fichier est au début
+        content.seek(0)
+        file_bytes = content.read() # Lecture du contenu en mémoire (bytes)
+        
+        # Récupération du type de contenu
+        file_content_type = getattr(content, 'content_type', 'application/octet-stream')
+        
         try:
-            # FIX CRITIQUE : Utiliser 'file=' (argument attendu par la librairie Supabase)
+            # ATTENTION : on place 'file_bytes' en PREMIER argument, sans mot-clé (argument positionnel)
             res = self.client.storage.from_(self.bucket_name).upload(
-                path=name,
-                file=content.file,  # L'OBJET FICHIER
+                file_bytes, # CONTENU DU FICHIER EN BYTES
+                path=name,  # L'argument 'path' est le second
                 file_options={"content-type": file_content_type}
             )
             
