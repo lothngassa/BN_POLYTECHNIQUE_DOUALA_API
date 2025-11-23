@@ -1,24 +1,19 @@
-# memoires/models.py
-
 from django.db import models
 
 class Memoire(models.Model):
     """
-    Modèle de base pour enregistrer les mémoires de fin d'études.
+    Modèle pour enregistrer les mémoires avec stockage du fichier dans Supabase.
     """
-    # Données du formulaire
-    titre = models.CharField(max_length=255, verbose_name="Titre du Mémoire")
-    auteur = models.CharField(max_length=150, verbose_name="Nom(s) de l'Auteur(s)")
-    annee = models.IntegerField(verbose_name="Année de Soutenance")
+    titre = models.CharField(max_length=255)
+    auteur = models.CharField(max_length=150)
+    annee = models.IntegerField()
 
-    # Pour le filtrage (selon votre code HTML)
-    filiere = models.CharField(max_length=50, verbose_name="Filière (Ex: GI, GM, GC)")
-    axe_recherche = models.CharField(max_length=100, blank=True, null=True, verbose_name="Axe de Recherche")
+    filiere = models.CharField(max_length=50)
+    axe_recherche = models.CharField(max_length=100, blank=True, null=True)
 
-    # Champ clé pour le fichier PDF lui-même
-    fichier_pdf = models.FileField(upload_to='memoires/pdfs/', verbose_name="Fichier PDF")
+    # On stocke maintenant seulement le lien Supabase
+    fichier_pdf_url = models.URLField(max_length=500, verbose_name="URL du PDF Supabase")
 
-    # Champs automatiques
     date_soumission = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -26,3 +21,4 @@ class Memoire(models.Model):
 
     def __str__(self):
         return f"{self.titre} par {self.auteur} ({self.annee})"
+
