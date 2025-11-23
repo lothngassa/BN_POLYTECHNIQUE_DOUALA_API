@@ -34,7 +34,7 @@ class SupabaseStorage(Storage):
         if not self.client:
             raise Exception("Client Supabase non initialisé.")
         
-        # CORRECTIF DÉFINITIF (tentative 3) : Utilisation de l'argument positionnel pour le contenu.
+        # V3 - Utilisation de l'argument 'data' avec bytes pour contourner l'erreur de mot-clé.
         
         # S'assurer que le pointeur de fichier est au début
         content.seek(0)
@@ -44,10 +44,10 @@ class SupabaseStorage(Storage):
         file_content_type = getattr(content, 'content_type', 'application/octet-stream')
         
         try:
-            # ATTENTION : on place 'file_bytes' en PREMIER argument, sans mot-clé (argument positionnel)
+            # L'argument 'data' prend les bytes, et 'path' est le nom du fichier.
             res = self.client.storage.from_(self.bucket_name).upload(
-                file_bytes, # CONTENU DU FICHIER EN BYTES
-                path=name,  # L'argument 'path' est le second
+                file_bytes, 
+                path=name,  
                 file_options={"content-type": file_content_type}
             )
             
