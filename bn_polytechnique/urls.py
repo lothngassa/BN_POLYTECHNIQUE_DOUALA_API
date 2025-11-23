@@ -7,7 +7,14 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+# 🚨 AJOUT : Importe la nouvelle vue pour le Health Check (Contrôle de Santé)
+from . import views 
+
 urlpatterns = [
+    # 🚨 CORRECTION : Définit la vue racine (/) pour les contrôles de santé Render (Retournera 200 OK)
+    # Ceci remplace la ligne manquante qui causait le 404 Not Found.
+    path('', views.api_root_view), 
+    
     # Route pour l'administration Django
     path('admin/', admin.site.urls),
 
