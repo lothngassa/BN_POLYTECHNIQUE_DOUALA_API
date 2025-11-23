@@ -9,4 +9,4 @@ dj-database-url
 whitenoise
 psycopg2-binary
 django-storages
-supabase-py
+supabase
