@@ -20,11 +20,10 @@ DEBUG = 'RENDER' not in os.environ
 # Sécurité: Lecture des hôtes autorisés depuis Render
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
 
-# 🚨 CORRECTION CRITIQUE : AJOUT DU NOM D'HÔTE DE RENDER
-# Ceci garantit que l'URL publique de Render est autorisée, résolvant le 400 Bad Request.
+# 🚨 CORRECTIF HÔTES : AJOUT DU NOM D'HÔTE DE RENDER
+# Ceci garantit que l'URL publique de Render est autorisée.
 RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
 if RENDER_EXTERNAL_HOSTNAME:
-    # Ajoute le domaine public de Render à la liste des hôtes autorisés
     ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 
@@ -76,7 +75,6 @@ WSGI_APPLICATION = 'bn_polytechnique.wsgi.application'
 
 
 # SECTION CLÉ : CONFIGURATION DE LA BASE DE DONNÉES PERSISTANTE (PostgreSQL sur Render)
-# La variable DATABASE_URL est lue par dj_database_url (PostgreSQL recommandé en prod)
 DATABASES = {
     'default': dj_database_url.config(
         default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
@@ -108,7 +106,7 @@ USE_TZ = True
 
 
 # ==============================================================================
-# 🎯 CONFIGURATION SUPABASE STORAGE (Fichiers Médias)
+# 🎯 CONFIGURATION SUPABASE STORAGE (NOUVEAU SYSTÈME)
 # ==============================================================================
 
 # --- 1. Lecture des Clés Supabase (variables de Render) ---
@@ -119,14 +117,15 @@ SUPABASE_BUCKET_NAME = os.environ.get("SUPABASE_BUCKET_NAME")
 # --- 2. Configuration du Stockage de Fichiers (Media) ---
 
 if SUPABASE_URL and SUPABASE_BUCKET_NAME:
-    # 🎯 CHEMIN VERS VOTRE CLASSE DE STOCKAGE PERSONNALISÉE
-    DEFAULT_FILE_STORAGE = 'bn_polytechnique.storage_backends.SupabaseStorage'
+    # 🚨 CHANGEMENT CRITIQUE : On pointe vers le NOUVEAU fichier 'new_storage.py'
+    # Cela force Django à utiliser le code corrigé et ignore l'ancien fichier en cache.
+    DEFAULT_FILE_STORAGE = 'bn_polytechnique.new_storage.NewSupabaseStorage'
     
-    # 🎯 L'URL où Supabase sert les fichiers (pour les liens générés par Django)
+    # L'URL où Supabase sert les fichiers
     MEDIA_URL = f'{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET_NAME.lower()}/' 
 
 else:
-    # Configuration par défaut pour le développement local si les variables ne sont pas définies
+    # Configuration locale par défaut
     DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
     MEDIA_URL = '/media/'
     MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
