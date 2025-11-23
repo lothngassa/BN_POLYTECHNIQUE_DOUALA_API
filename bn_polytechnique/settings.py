@@ -10,14 +10,22 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECRET_KEY
+# Assurez-vous que cette clé est définie dans les variables d'environnement sur Render !
 SECRET_KEY = os.environ.get('SECRET_KEY', 'clé_très_secrète_par_défaut')
 
 # DÉFINITION DU MODE DEBUG
-# DEBUG est True si 'RENDER' n'est pas dans les variables d'environnement.
+# DEBUG est True si 'RENDER' n'est pas dans les variables d'environnement (dev local).
 DEBUG = 'RENDER' not in os.environ
 
 # Sécurité: Lecture des hôtes autorisés depuis Render
 ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
+
+# 🚨 CORRECTION CRITIQUE : AJOUT DU NOM D'HÔTE DE RENDER
+# Ceci garantit que l'URL publique de Render est autorisée, résolvant le 400 Bad Request.
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('RENDER_EXTERNAL_HOSTNAME')
+if RENDER_EXTERNAL_HOSTNAME:
+    # Ajoute le domaine public de Render à la liste des hôtes autorisés
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 
 INSTALLED_APPS = [
@@ -100,7 +108,7 @@ USE_TZ = True
 
 
 # ==============================================================================
-# 🎯 MISE À JOUR : CONFIGURATION SUPABASE STORAGE (Fichiers Médias)
+# 🎯 CONFIGURATION SUPABASE STORAGE (Fichiers Médias)
 # ==============================================================================
 
 # --- 1. Lecture des Clés Supabase (variables de Render) ---
@@ -134,6 +142,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # Autres paramètres...
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# Configuration CORS : Permet à votre frontend Vercel d'accéder à l'API
 CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 
@@ -141,5 +150,3 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [
     "https://bnpd-polytechnique-douala-v5q3.vercel.app", 
 ]
-
-# Fin du fichier settings.py
