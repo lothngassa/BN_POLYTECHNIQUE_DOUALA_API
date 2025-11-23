@@ -1,99 +1,48 @@
+# memoires/supabase_storage.py (Version simplifiée et fonctionnelle)
+
 import os
-from io import BytesIO
-
-from django.core.files.storage import Storage
-from django.conf import settings
 from supabase import create_client, Client
+from django.conf import settings # Maintenir l'import de settings est une bonne pratique
 
-class SupabaseStorage(Storage):
+# Récupération des variables d'environnement (elles doivent être définies sur Render!)
+SUPABASE_URL = os.getenv("SUPABASE_URL")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+BUCKET_NAME = os.getenv("SUPABASE_BUCKET_NAME", "memoires") # Utilisez "memoires" par défaut si non défini
+
+# Initialisation du client Supabase
+if not SUPABASE_URL or not SUPABASE_KEY:
+    # Ceci vous donnera une erreur claire au démarrage si les clés manquent
+    print("WARNING: SUPABASE_URL ou SUPABASE_KEY sont manquants. L'upload échouera.")
+    supabase = None
+else:
+    try:
+        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    except Exception as e:
+        print(f"Erreur d'initialisation Supabase: {e}")
+        supabase = None
+
+
+def upload_pdf_to_supabase(file, filename):
     """
-    Système de stockage personnalisé pour Supabase Storage.
+    Envoie un fichier PDF dans le bucket Supabase.
+    Retourne l'URL publique du fichier.
     """
-    def __init__(self, location=None, bucket_name=None, base_url=None):
-        # Récupération des variables d'environnement
-        self.url: str = os.environ.get("SUPABASE_URL")
-        self.key: str = os.environ.get("SUPABASE_KEY")
-        self.bucket_name: str = os.environ.get("SUPABASE_BUCKET_NAME")
+    if supabase is None:
+        raise ConnectionError("Le client Supabase n'est pas initialisé. Vérifiez les variables d'environnement.")
 
-        if not self.url or not self.key or not self.bucket_name:
-            raise EnvironmentError("Les variables SUPABASE_URL, SUPABASE_KEY et SUPABASE_BUCKET_NAME doivent être définies.")
+    # Lire le contenu du fichier
+    file_bytes = file.read()
 
-        # Initialisation du client Supabase
-        self.supabase: Client = create_client(self.url, self.key)
+    # Le chemin et le nom que le fichier aura dans le bucket (ex: "pdfs/mon_memoire.pdf")
+    path_in_bucket = f"pdfs/{filename}"
 
-        # Assurez-vous que la clé (Bucket Name) est en minuscules (bonne pratique Supabase)
-        self.bucket_name = self.bucket_name.lower()
-        self.base_url = f"{self.url}/storage/v1/object/public/{self.bucket_name}/"
+    # Upload direct vers Supabase Storage
+    # Note: Dans la librairie Python Supabase, 'file' est le chemin dans le bucket, et 'file_content' est le contenu en octets.
+    supabase.storage.from_(BUCKET_NAME).upload(
+        file=path_in_bucket,
+        file_content=file_bytes,
+        file_options={"content-type": "application/pdf"}
+    )
 
-
-    def _save(self, name, content):
-        """
-        Enregistre le fichier dans Supabase Storage.
-        'name' est le chemin du fichier (ex: 'pdfs/monfichier.pdf').
-        'content' est l'objet fichier de Django.
-        """
-        
-        # Le contenu doit être un objet bytes
-        if hasattr(content, 'read'):
-            # Si c'est un fichier, lisez tout le contenu
-            file_data = content.read()
-        else:
-            # Sinon, supposez que c'est déjà des bytes
-            file_data = content
-
-        # Upload vers Supabase
-        try:
-            # La méthode upload_from_file est plus simple mais peut échouer.
-            # Ici, nous utilisons l'upload d'octets bruts:
-            self.supabase.storage.from_(self.bucket_name).upload(
-                file=file_data,
-                path=name,
-                file_options={"content-type": content.content_type if hasattr(content, 'content_type') else 'application/octet-stream'}
-            )
-        except Exception as e:
-            # Supabase peut renvoyer un 409 (Conflict) si le fichier existe déjà. 
-            # Dans ce cas, nous tentons un 'update'
-            if "The resource already exists" in str(e):
-                 self.supabase.storage.from_(self.bucket_name).update(
-                    file=file_data,
-                    path=name,
-                    file_options={"content-type": content.content_type if hasattr(content, 'content_type') else 'application/octet-stream'}
-                )
-            else:
-                raise e
-            
-
-        return name
-
-    def _open(self, name, mode='rb'):
-        """
-        Ouvre un fichier pour la lecture (non essentiel pour l'accès public, mais requis par Django).
-        """
-        # Récupère l'objet bytes du fichier de Supabase
-        res = self.supabase.storage.from_(self.bucket_name).download(name)
-        
-        # Renvoie le contenu sous forme de fichier en mémoire
-        return BytesIO(res)
-
-    def exists(self, name):
-        """
-        Vérifie si le fichier existe (non essentiel, mais utile).
-        """
-        try:
-            self.supabase.storage.from_(self.bucket_name).get_public_url(name)
-            return True
-        except:
-            return False
-
-    def url(self, name):
-        """
-        Renvoie l'URL publique pour accéder directement au fichier.
-        """
-        # Supabase a une structure d'URL prévisible pour les buckets publics
-        return self.base_url + name
-        
-    def delete(self, name):
-        """
-        Supprime le fichier.
-        """
-        self.supabase.storage.from_(self.bucket_name).remove([name])
+    # L'URL publique sera utilisée par votre frontend
+    return f"{SUPABASE_URL}/storage/v1/object/public/{BUCKET_NAME}/{path_in_bucket}"
