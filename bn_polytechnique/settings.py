@@ -1,3 +1,7 @@
+"""
+Django settings for bn_polytechnique project.
+"""
+
 import os
 import dj_database_url
 from pathlib import Path
@@ -6,14 +10,14 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECRET_KEY
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-l2!am&7ke4b4sv@0@y4k0!*bdic8$l5#s)i!#u+foyqzeqh%nm')
+SECRET_KEY = os.environ.get('SECRET_KEY', 'clé_très_secrète_par_défaut')
 
 # DÉFINITION DU MODE DEBUG
-# DEBUG est True si 'RENDER' n'est pas dans les variables d'environnement (par défaut en local)
-# DEBUG est False si l'app est déployée sur Render.
+# DEBUG est True si 'RENDER' n'est pas dans les variables d'environnement.
 DEBUG = 'RENDER' not in os.environ
 
-ALLOWED_HOSTS = ['*']
+# Sécurité: Lecture des hôtes autorisés depuis Render
+ALLOWED_HOSTS = os.environ.get("ALLOWED_HOSTS", "127.0.0.1,localhost").split(",")
 
 
 INSTALLED_APPS = [
@@ -27,7 +31,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'memoires.apps.MemoiresConfig',
     'corsheaders',
-    'bn_polytechnique',
+    'bn_polytechnique', # Votre package de configuration
 ]
 
 MIDDLEWARE = [
@@ -63,10 +67,11 @@ TEMPLATES = [
 WSGI_APPLICATION = 'bn_polytechnique.wsgi.application'
 
 
-# SECTION CLÉ : CONFIGURATION DE LA BASE DE DONNÉES PERSISTANTE
+# SECTION CLÉ : CONFIGURATION DE LA BASE DE DONNÉES PERSISTANTE (PostgreSQL sur Render)
+# La variable DATABASE_URL est lue par dj_database_url (PostgreSQL recommandé en prod)
 DATABASES = {
     'default': dj_database_url.config(
-        default='sqlite:///db.sqlite3',
+        default=os.environ.get('DATABASE_URL', 'sqlite:///db.sqlite3'),
         conn_max_age=600
     )
 }
@@ -88,30 +93,45 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'fr-fr' # Langue ajustée pour la cohérence
 TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
 
-# =========================================================
-# MISE À JOUR : CONFIGURATION STATIQUE ET MÉDIAS
+# ==============================================================================
+# 🎯 MISE À JOUR : CONFIGURATION SUPABASE STORAGE (Fichiers Médias)
+# ==============================================================================
+
+# --- 1. Lecture des Clés Supabase (variables de Render) ---
+SUPABASE_URL = os.environ.get("SUPABASE_URL")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
+SUPABASE_BUCKET_NAME = os.environ.get("SUPABASE_BUCKET_NAME")
+
+# --- 2. Configuration du Stockage de Fichiers (Media) ---
+
+if SUPABASE_URL and SUPABASE_BUCKET_NAME:
+    # 🎯 CHEMIN VERS VOTRE CLASSE DE STOCKAGE PERSONNALISÉE
+    DEFAULT_FILE_STORAGE = 'bn_polytechnique.storage_backends.SupabaseStorage'
+    
+    # 🎯 L'URL où Supabase sert les fichiers (pour les liens générés par Django)
+    MEDIA_URL = f'{SUPABASE_URL}/storage/v1/object/public/{SUPABASE_BUCKET_NAME.lower()}/' 
+
+else:
+    # Configuration par défaut pour le développement local si les variables ne sont pas définies
+    DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+    MEDIA_URL = '/media/'
+    MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
 # =========================================================
 
 # Fichiers Statiques (CSS, JS, images du projet)
 STATIC_URL = '/static/'
-# WhiteNoise utilise STATIC_ROOT pour servir les fichiers statiques en prod.
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles') 
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
-# Fichiers Médias (PDFs téléchargés par les utilisateurs)
-# Ceci est la configuration essentielle pour le problème de 404
-MEDIA_URL = '/media/'
-# Utilisation de os.path.join pour assurer la compatibilité avec tous les OS
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media') 
 
-# =========================================================
-
+# Autres paramètres...
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOW_ALL_ORIGINS = True
@@ -121,3 +141,5 @@ CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [
     "https://bnpd-polytechnique-douala-v5q3.vercel.app", 
 ]
+
+# Fin du fichier settings.py
