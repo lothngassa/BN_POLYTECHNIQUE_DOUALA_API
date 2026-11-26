@@ -11,3 +11,4 @@ psycopg2-binary
 django-storages
 supabase
 python-slugify
+pymupdf==2.2

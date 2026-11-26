@@ -1,41 +1,39 @@
+"""Envoi des fichiers : Supabase Storage en production, le disque local en développement."""
 import os
-from supabase import create_client, Client
+from pathlib import Path
 
-# --- Récupération des clés ---
+from django.conf import settings
+
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY")
-BUCKET_NAME = os.getenv("SUPABASE_BUCKET_NAME", "memoires") 
+BUCKET_NAME = os.getenv("SUPABASE_BUCKET_NAME", "memoires")
 
-# --- Initialisation du client ---
-if not SUPABASE_URL or not SUPABASE_KEY:
-    print("WARNING: SUPABASE_URL ou SUPABASE_KEY sont manquants. L'upload échouera.")
-    supabase = None
-else:
-    try:
-        supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    except Exception as e:
-        print(f"Erreur d'initialisation Supabase: {e}")
-        supabase = None
+_client = None
 
 
-def upload_pdf_to_supabase(file, filename):
-    """
-    Envoie un fichier PDF dans le bucket Supabase.
-    Retourne l'URL publique du fichier.
-    """
-    if supabase is None:
-        raise ConnectionError("Le client Supabase n'est pas initialisé. Vérifiez les variables d'environnement.")
+def _supabase():
+    global _client
+    if _client is None and SUPABASE_URL and SUPABASE_KEY:
+        from supabase import create_client
 
-    file_bytes = file.read()
-    path_in_bucket = f"pdfs/{filename}"
+        _client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    return _client
 
-    # 🚨 CORRECTION ICI : Utilisation des bons noms d'arguments pour la bibliothèque
-    # 'path' est le chemin dans le bucket
-    # 'file' est le contenu du fichier (les bytes)
-    supabase.storage.from_(BUCKET_NAME).upload(
-        path=path_in_bucket,
-        file=file_bytes,
-        file_options={"content-type": "application/pdf"}
-    )
 
-    return f"{SUPABASE_URL}/storage/v1/object/public/{BUCKET_NAME}/{path_in_bucket}"
+def upload_file(data: bytes, path: str, content_type: str) -> str:
+    """Enregistre `data` sous `path` et renvoie son adresse publique.
+
+    Sans Supabase et en mode DEBUG, le fichier est écrit dans MEDIA_ROOT
+    et l'adresse renvoyée est relative (/media/...)."""
+    client = _supabase()
+    if client is not None:
+        client.storage.from_(BUCKET_NAME).upload(
+            path=path, file=data, file_options={"content-type": content_type}
+        )
+        return f"{SUPABASE_URL}/storage/v1/object/public/{BUCKET_NAME}/{path}"
+    if settings.DEBUG:
+        target = Path(settings.MEDIA_ROOT) / path
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_bytes(data)
+        return f"{settings.MEDIA_URL}{path}"
+    raise ConnectionError("Stockage non configuré : définissez SUPABASE_URL et SUPABASE_KEY.")
